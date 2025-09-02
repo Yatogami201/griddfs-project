@@ -1,0 +1,55 @@
+services:
+  namenode:
+    build: ./namenode
+    environment:
+      - DATANODES=http://datanode1:5000,http://datanode2:5000
+    ports:
+      - "5000:5000"
+    networks:
+      - gridnet
+
+  datanode1:
+    build: ./datanode
+    environment:
+      - DATANODE_ID=1
+    volumes:
+      - datanode1_data:/data
+    ports:
+      - "5001:5000"
+    networks:
+      - gridnet
+
+  datanode2:
+    build: ./datanode
+    environment:
+      - DATANODE_ID=2
+    volumes:
+      - datanode2_data:/data
+    ports:
+      - "5002:5000"
+    networks:
+      - gridnet
+
+  client:
+    build: ./client
+    environment:
+      - NAMENODE_URL=http://namenode:5000
+      - BLOCK_SIZE_MB=4
+    volumes:
+      - ./data:/app/data  # ← ADD THIS LINE
+    stdin_open: true
+    tty: true
+    networks:
+      - gridnet
+    depends_on:
+      - namenode
+      - datanode1
+      - datanode2
+
+networks:
+  gridnet:
+    driver: bridge
+
+volumes:
+  datanode1_data:
+  datanode2_data:
