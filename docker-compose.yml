@@ -39,6 +39,7 @@ services:
       - ./data:/app/data  # ← ADD THIS LINE
     stdin_open: true
     tty: true
+    command: tail -f /dev/null 
     networks:
       - gridnet
     depends_on:
