@@ -1,0 +1,4 @@
+Creando archivo de texto normal... 
+Hello GridDFS - Este es un archivo pequeno para testing 
+Linea 2 del archivo pequeno 
+Linea 3 con caracteres especiales:  ‚¡¢£ ¤ 
