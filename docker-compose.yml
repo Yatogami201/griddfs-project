@@ -1,56 +1,152 @@
-services:
-  namenode:
-    build: ./namenode
-    environment:
-      - DATANODES=http://datanode1:5000,http://datanode2:5000
-    ports:
-      - "5000:5000"
-    networks:
-      - gridnet
-
-  datanode1:
-    build: ./datanode
-    environment:
-      - DATANODE_ID=1
-    volumes:
-      - datanode1_data:/data
-    ports:
-      - "5001:5000"
-    networks:
-      - gridnet
-
-  datanode2:
-    build: ./datanode
-    environment:
-      - DATANODE_ID=2
-    volumes:
-      - datanode2_data:/data
-    ports:
-      - "5002:5000"
-    networks:
-      - gridnet
-
-  client:
-    build: ./client
-    environment:
-      - NAMENODE_URL=http://namenode:5000
-      - BLOCK_SIZE_MB=4
-    volumes:
-      - ./data:/app/data  # ← ADD THIS LINE
-    stdin_open: true
-    tty: true
-    command: tail -f /dev/null 
-    networks:
-      - gridnet
-    depends_on:
-      - namenode
-      - datanode1
-      - datanode2
-
 networks:
   gridnet:
     driver: bridge
 
 volumes:
+  namenode_data:
+    driver: local
   datanode1_data:
+    driver: local
   datanode2_data:
+    driver: local
+  datanode3_data:
+    driver: local
+  datanode4_data:
+    driver: local
+
+services:
+  namenode:
+    build: ./namenode
+    container_name: namenode
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_TYPE=namenode
+      - PORT=5000
+      - STORAGE_PATH=/app/data
+      - LOG_LEVEL=INFO
+    volumes:
+      - namenode_data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - gridnet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  datanode1:
+    build: ./datanode
+    container_name: datanode1
+    ports:
+      - "5001:5000"
+    environment:
+      - NODE_ID=datanode1
+      - PORT=5000
+      # URL interna para comunicación entre contenedores
+      - DATANODE_URL=http://localhost:5001
+      # URL para registro con NameNode (accesible desde cliente)
+      - EXTERNAL_URL=http://localhost:5001
+      - NAMENODE_URL=http://namenode:5000
+      - STORAGE_ROOT=/data/storage
+      - LOGS_PATH=/data/logs
+      - MAX_RETRIES=10
+    volumes:
+      - datanode1_data:/data
+      - ./logs:/data/external_logs
+    networks:
+      - gridnet
+    depends_on:
+      namenode:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  datanode2:
+    build: ./datanode
+    container_name: datanode2
+    ports:
+      - "5002:5000"
+    environment:
+      - NODE_ID=datanode2
+      - PORT=5000
+      - DATANODE_URL=http://localhost:5002
+      - EXTERNAL_URL=http://localhost:5002
+      - NAMENODE_URL=http://namenode:5000
+      - STORAGE_ROOT=/data/storage
+      - LOGS_PATH=/data/logs
+      - MAX_RETRIES=10
+    volumes:
+      - datanode2_data:/data
+      - ./logs:/data/external_logs
+    networks:
+      - gridnet
+    depends_on:
+      namenode:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  datanode3:
+    build: ./datanode
+    container_name: datanode3
+    ports:
+      - "5003:5000"
+    environment:
+      - NODE_ID=datanode3
+      - PORT=5000
+      - DATANODE_URL=http://localhost:5003
+      - EXTERNAL_URL=http://localhost:5003
+      - NAMENODE_URL=http://namenode:5000
+      - STORAGE_ROOT=/data/storage
+      - LOGS_PATH=/data/logs
+      - MAX_RETRIES=10
+    volumes:
+      - datanode3_data:/data
+      - ./logs:/data/external_logs
+    networks:
+      - gridnet
+    depends_on:
+      namenode:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  datanode4:
+    build: ./datanode
+    container_name: datanode4
+    ports:
+      - "5004:5000"
+    environment:
+      - NODE_ID=datanode4
+      - PORT=5000
+      - DATANODE_URL=http://localhost:5004
+      - EXTERNAL_URL=http://localhost:5004
+      - NAMENODE_URL=http://namenode:5000
+      - STORAGE_ROOT=/data/storage
+      - LOGS_PATH=/data/logs
+      - MAX_RETRIES=10
+    volumes:
+      - datanode4_data:/data
+      - ./logs:/data/external_logs
+    networks:
+      - gridnet
+    depends_on:
+      namenode:
+        condition: service_healthy
+    restart: unless-stopped
