@@ -27,7 +27,6 @@ TOKEN_FILE = os.getenv("TOKEN_FILE", ".griddfs_token")
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
 
 class GridDFSClient:
-    """Cliente GridDFS con manejo mejorado de errores y reintentos"""
     
     def __init__(self):
         self.namenode_url = NAMENODE_URL
@@ -93,10 +92,7 @@ client = GridDFSClient()
 @click.group()
 @click.version_option(version="1.0.0")
 def cli():
-    """GridDFS Client - Sistema de Archivos Distribuido
-    
-    Cliente independiente para interactuar con el sistema GridDFS.
-    """
+ 
     pass
 
 @cli.command()
@@ -557,4 +553,5 @@ def config():
         click.echo("Conexión NameNode: FALLO")
 
 if __name__ == "__main__":
+
     cli()
