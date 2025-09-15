@@ -71,16 +71,30 @@ El diseño sigue la arquitectura Master/Worker:
    git clone https://github.com/usuario/griddfs-project.git
    cd griddfs-project
 
-2. Levantar contenedores:
+2. Levantar contenedores (comandos para cmd windows):
    ```bash
-   docker compose up -d --build
-
-3. Uso:
+   docker network create gridnet
+   
+   docker build -t griddfs/namenode ./namenode
+   
+   docker build -t griddfs/datanode ./datanode
+   
+   docker run -d --name namenode --network gridnet -p 5000:5000 -e NODE_TYPE=namenode -e PORT=5000 -e STORAGE_PATH=/app/data -e LOG_LEVEL=INFO -v namenode_data:/app/data griddfs/namenode
+   
+   docker run -d --name datanode1 --network gridnet -p 5001:5000 -e NODE_ID=datanode1 -e DATANODE_URL=http://localhost:5001 -e EXTERNAL_URL=http://localhost:5001 -e NAMENODE_URL=http://namenode:5000 -e STORAGE_ROOT=/data/storage -e LOGS_PATH=/data/logs -e MAX_RETRIES=10 -v datanode1_data:/data griddfs/datanode
+   
+   docker run -d --name datanode2 --network gridnet -p 5002:5000 -e NODE_ID=datanode2 -e DATANODE_URL=http://localhost:5002 -e EXTERNAL_URL=http://localhost:5002 -e NAMENODE_URL=http://namenode:5000 -e STORAGE_ROOT=/data/storage -e LOGS_PATH=/data/logs -e MAX_RETRIES=10 -v datanode2_data:/data griddfs/datanode
+   
+   docker run -d --name datanode3 --network gridnet -p 5003:5000 -e NODE_ID=datanode3 -e DATANODE_URL=http://localhost:5003 -e EXTERNAL_URL=http://localhost:5003 -e NAMENODE_URL=http://namenode:5000 -e STORAGE_ROOT=/data/storage -e LOGS_PATH=/data/logs -e MAX_RETRIES=10 -v datanode3_data:/data griddfs/datanode
+   
+   
+3. Uso (comandos para uso basico creando y subiendo un archivo):
    ```bash
    cd grid-client
    pip install -r requirements.txt
    python grid_cli.py register usuario contraseña
    python grid_cli.py login usuario contraseña
+   python grid_cli.py datanodes -d
    python grid_cli.py put test.txt
    python grid_cli.py ls
    python grid_cli.py get test.txt descargado.txt
@@ -97,4 +111,5 @@ El diseño sigue la arquitectura Master/Worker:
   - El sistema fue probado con archivos de hasta 100 MB, confirmando el correcto particionamiento en 25 bloques de 4 MB cada uno.
   - Los bloques se distribuyen de manera balanceada entre los 4 DataNodes.
   - Se probó tolerancia a fallos deteniendo un DataNode y verificando que el sistema siguiera funcionando con los restantes.
+
 
