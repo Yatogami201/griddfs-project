@@ -2,7 +2,7 @@
 
 # Estudiantes: 
 - Lorena Goez Ruiz, lgoezr1@eafit.edu.co 
-- Samuel Valencia Loaiza, 
+- Samuel Valencia Loaiza, svalenci41@eafit.edu.co
 
 # Profesor: 
 Edwin Nelson Valencia  
@@ -97,3 +97,4 @@ El diseño sigue la arquitectura Master/Worker:
   - El sistema fue probado con archivos de hasta 100 MB, confirmando el correcto particionamiento en 25 bloques de 4 MB cada uno.
   - Los bloques se distribuyen de manera balanceada entre los 4 DataNodes.
   - Se probó tolerancia a fallos deteniendo un DataNode y verificando que el sistema siguiera funcionando con los restantes.
+
