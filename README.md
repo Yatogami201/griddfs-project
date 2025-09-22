@@ -11,6 +11,9 @@ Edwin Nelson Valencia
 
 # Proyecto: GridFS – Sistema de Archivos Distribuido
 
+## Link al video
+https://www.youtube.com/watch?v=_EA5LAWfsZw
+
 ## 1. Breve descripción de la actividad
 
 El proyecto consiste en la implementación de un sistema de archivos distribuido similar a HDFS, denominado GridFS.  
@@ -111,5 +114,6 @@ El diseño sigue la arquitectura Master/Worker:
   - El sistema fue probado con archivos de hasta 100 MB, confirmando el correcto particionamiento en 25 bloques de 4 MB cada uno.
   - Los bloques se distribuyen de manera balanceada entre los 4 DataNodes.
   - Se probó tolerancia a fallos deteniendo un DataNode y verificando que el sistema siguiera funcionando con los restantes.
+
 
 
