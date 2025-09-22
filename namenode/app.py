@@ -10,6 +10,7 @@ import asyncio
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
+import requests
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 STORAGE_PATH = os.getenv("STORAGE_PATH", "/app/data")
@@ -356,7 +357,7 @@ def get_file(filename: str, username: str = Depends(get_current_user)):
 
 @app.delete("/rm/{filename:path}")
 def rm(filename: str, username: str = Depends(get_current_user)):
-    """Eliminar un archivo"""
+    """Eliminar un archivo + sus bloques en los DataNodes"""
     normalized_filename = f"/{filename}" if not filename.startswith("/") else filename
     normalized_filename = normalized_filename.replace("//", "/")
     key = (username, normalized_filename)
@@ -368,13 +369,30 @@ def rm(filename: str, username: str = Depends(get_current_user)):
     file_info = files[key]
     blocks_info = file_info.get("blocks", [])
 
-    # Eliminar el archivo de metadatos
+    # Eliminar metadatos en el NameNode
     del files[key]
     log_namenode(f"File deleted: {normalized_filename} by {username}")
 
+    # Intentar borrar cada bloque en su DataNode correspondiente
+    deleted_blocks = []
+    failed_blocks = []
+    for block in blocks_info:
+        datanode = block.get("datanode")
+        block_id = block.get("block_id")
+        if datanode and block_id:
+            try:
+                resp = requests.delete(f"{datanode}/block/{block_id}", timeout=5)
+                if resp.status_code == 200:
+                    deleted_blocks.append(block_id)
+                else:
+                    failed_blocks.append({"block": block_id, "datanode": datanode, "status": resp.status_code})
+            except Exception as e:
+                failed_blocks.append({"block": block_id, "datanode": datanode, "error": str(e)})
+
     return {
         "msg": f"File removed: {normalized_filename}",
-        "blocks_affected": len(blocks_info)
+        "blocks_deleted": len(deleted_blocks),
+        "blocks_failed": failed_blocks
     }
 
 
@@ -435,8 +453,11 @@ def mkdir(path: str, username: str = Depends(get_current_user)):
 
 
 @app.delete("/rmdir/{path:path}")
-def rmdir(path: str, username: str = Depends(get_current_user)):
-    """Eliminar directorio"""
+def rmdir(path: str, username: str = Depends(get_current_user), recursive: bool = True):
+    """Eliminar un directorio.
+       - Si recursive=True: borra todos los archivos (metadata + bloques en DataNodes) y subdirectorios.
+       - Si recursive=False: solo elimina directorios vacíos (comportamiento original).
+    """
     dir_path = f"/{path}" if not path.startswith("/") else path
     dir_path = dir_path.replace("//", "/")
     key = (username, dir_path)
@@ -444,16 +465,50 @@ def rmdir(path: str, username: str = Depends(get_current_user)):
     if key not in directories:
         raise HTTPException(status_code=404, detail=f"Directory not found: {dir_path}")
 
-    # Verificar que el directorio esté vacío
     dir_prefix = dir_path.rstrip("/") + "/"
-    for (owner, item_path) in list(files.keys()) + list(directories.keys()):
-        if owner == username and item_path.startswith(dir_prefix) and item_path != dir_path:
-            raise HTTPException(status_code=400, detail=f"Directory not empty: {dir_path}")
 
+    if recursive:
+        # 1. Borrar archivos dentro del directorio
+        archivos_a_borrar = [(owner, fpath) for (owner, fpath) in list(files.keys())
+                             if owner == username and fpath.startswith(dir_prefix)]
+        for fkey in archivos_a_borrar:
+            file_info = files[fkey]
+            blocks_info = file_info.get("blocks", [])
+            del files[fkey]
+            log_namenode(f"File deleted (recursive): {fkey[1]} by {username}")
+
+            for block in blocks_info:
+                datanode = block.get("datanode")
+                block_id = block.get("block_id")
+                if datanode and block_id:
+                    try:
+                        resp = requests.delete(f"{datanode}/block/{block_id}", timeout=5)
+                        if resp.status_code == 200:
+                            log_namenode(f"Bloque {block_id} borrado en {datanode}")
+                        else:
+                            log_namenode(f"Falló borrar bloque {block_id} en {datanode} "
+                                         f"(HTTP {resp.status_code})", "WARNING")
+                    except Exception as e:
+                        log_namenode(f"Error borrando bloque {block_id} en {datanode}: {e}", "ERROR")
+
+        # 2. Borrar subdirectorios (solo metadata)
+        subdirs = [(owner, dpath) for (owner, dpath) in list(directories.keys())
+                   if owner == username and dpath.startswith(dir_prefix) and dpath != dir_path]
+        for dkey in subdirs:
+            del directories[dkey]
+            log_namenode(f"Subdirectorio eliminado (recursive): {dkey[1]} by {username}")
+
+    else:
+        # Verificar que esté vacío
+        for (owner, item_path) in list(files.keys()) + list(directories.keys()):
+            if owner == username and item_path.startswith(dir_prefix) and item_path != dir_path:
+                raise HTTPException(status_code=400, detail=f"Directory not empty: {dir_path}")
+
+    # 3. Finalmente eliminar el directorio en sí
     del directories[key]
     log_namenode(f"Directory removed: {dir_path} by {username}")
-    return {"msg": f"Directory removed: {dir_path}"}
 
+    return {"msg": f"Directory removed: {dir_path}", "recursive": recursive}
 
 @app.get("/ls")
 def ls(path: str = "/", username: str = Depends(get_current_user)):
@@ -592,4 +647,5 @@ def get_distribution_plan(num_blocks: int, username: str = Depends(get_current_u
         raise HTTPException(status_code=503, detail="No hay DataNodes activos")
 
     distribution = [active_nodes[i % len(active_nodes)] for i in range(num_blocks)]
+
     return {"distribution": distribution, "block_count": num_blocks}
