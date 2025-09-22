@@ -108,8 +108,8 @@ El diseño sigue la arquitectura Master/Worker:
    python grid_cli.py rmdir (nombre directorio)
    python grid_cli.py rm (nombre)
    
-   (NOTA POST SUSTENTACIÓN) : para subir un archivo a un directorio creado en el docker, se usa el comando: 
-python grid_cli.py put test.txt /documentos/test.txt
+   (NOTA POST SUSTENTACIÓN) : para subir un archivo a un directorio creado en el docker, se usa el comando: python grid_cli.py put test.txt /documentos/test.txt
+
 
 
   ## 4. Configuración de parámetros principales
